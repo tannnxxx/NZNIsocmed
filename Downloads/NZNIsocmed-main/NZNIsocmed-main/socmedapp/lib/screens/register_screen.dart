@@ -1,7 +1,6 @@
-import 'dart:ui';
+import 'dart:ui'; // Required for ImageFilter
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'login_screen.dart'; // Siguraduhing tama ang import path ng Login Screen mo
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,68 +10,60 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // --- CONTROLLERS ---
   final firstName = TextEditingController();
   final lastName = TextEditingController();
   final email = TextEditingController();
   final password = TextEditingController();
   final confirmPassword = TextEditingController();
+
   String? selectedGender;
   bool loading = false;
 
-  // --- FUNCTION: REGISTER LOGIC ---
   void register() async {
-    if (firstName.text.isEmpty || lastName.text.isEmpty || email.text.isEmpty ||
-        password.text.isEmpty || selectedGender == null) {
-      _showMsg("Please fill all fields and select gender", isError: true);
+    if (firstName.text.isEmpty ||
+        lastName.text.isEmpty ||
+        email.text.isEmpty ||
+        password.text.isEmpty ||
+        selectedGender == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields and select gender")),
+      );
       return;
     }
 
     if (password.text != confirmPassword.text) {
-      _showMsg("Passwords do not match", isError: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
       return;
     }
 
     setState(() => loading = true);
 
     try {
-      String fullName = "${firstName.text.trim()} ${lastName.text.trim()}";
-
-      // Tawagin ang AuthService para sa registration
-      await AuthService().registerUser(
-        email.text.trim(),
-        password.text.trim(),
-        fullName,
+      // Create user sa Firebase
+      UserCredential userCred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email.text.trim(),
+        password: password.text.trim(),
       );
 
-      if (mounted) {
-        _showMsg("Account created! Please Login");
-        _goToLogin(); // Awtomatikong babalik sa Login pagkatapos
-      }
+      // I-update ang Display Name (FirstName + LastName)
+      await userCred.user?.updateDisplayName("${firstName.text} ${lastName.text}");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Account created! Please Login")),
+      );
+      Navigator.pop(context); // Balik sa Login
     } catch (e) {
-      if (mounted) _showMsg("Registration failed: $e", isError: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Registration failed: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => loading = false);
     }
-  }
-
-  // --- NAVIGATION FUNCTION ---
-  void _goToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  }
-
-  // --- SNACKBAR HELPER ---
-  void _showMsg(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.redAccent : Colors.blueAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -81,74 +72,112 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: const Color(0xFFF0F7FF),
       body: Stack(
         children: [
-          // 1. DECORATIVE BACKGROUND BLOBS
-          Positioned(top: -100, right: -50, child: _buildBlurBlob(color: const Color(0xFF64B5F6).withOpacity(0.4), size: 350)),
-          Positioned(bottom: -80, left: -80, child: _buildBlurBlob(color: const Color(0xFFFFB74D).withOpacity(0.3), size: 300)),
+          // 1. Mesh Background Blobs
+          Positioned(
+            top: -100,
+            right: -50,
+            child: _buildBlurBlob(color: const Color(0xFF64B5F6).withOpacity(0.4), size: 350),
+          ),
+          Positioned(
+            bottom: -80,
+            left: -80,
+            child: _buildBlurBlob(color: const Color(0xFFFFB74D).withOpacity(0.3), size: 300),
+          ),
+          Positioned(
+            bottom: 200,
+            right: -20,
+            child: _buildBlurBlob(color: const Color(0xFF4DB6AC).withOpacity(0.2), size: 250),
+          ),
 
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
             child: Container(color: Colors.transparent),
           ),
 
-          // 2. BACK BUTTON (TOP LEFT)
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10, top: 10),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1A237E), size: 28),
-                onPressed: _goToLogin, // Babalik sa Login
-              ),
-            ),
-          ),
-
-          // 3. REGISTRATION FORM
+          // 2. Register UI
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withOpacity(0.65),
                   borderRadius: BorderRadius.circular(35),
                   border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    )
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                        "Register your account",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A237E))
+                      "JOIN THE JOURNEY",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1A237E),
+                      ),
                     ),
                     const SizedBox(height: 25),
 
-                    // NAMES
+                    // First & Last Name Row
                     Row(
                       children: [
-                        Expanded(child: _buildTextField(controller: firstName, label: "First Name", icon: Icons.person_outline)),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: firstName,
+                            label: "First Name",
+                            icon: Icons.person_outline,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildTextField(controller: lastName, label: "Last Name", icon: Icons.person_outline)),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: lastName,
+                            label: "Last Name",
+                            icon: Icons.person_outline,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 15),
 
-                    // GENDER
+                    // GENDER SELECTION UI
                     _buildGenderSelector(),
                     const SizedBox(height: 15),
 
-                    // EMAIL & PASSWORDS
-                    _buildTextField(controller: email, label: "Email Address", icon: Icons.email_outlined),
+                    // Email Field
+                    _buildTextField(
+                      controller: email,
+                      label: "Email Address",
+                      icon: Icons.email_outlined,
+                    ),
                     const SizedBox(height: 15),
-                    _buildTextField(controller: password, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
+
+                    // Password Field
+                    _buildTextField(
+                      controller: password,
+                      label: "Password",
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                    ),
                     const SizedBox(height: 15),
-                    _buildTextField(controller: confirmPassword, label: "Confirm Password", icon: Icons.lock_reset_rounded, isPassword: true),
+
+                    // Confirm Password Field
+                    _buildTextField(
+                      controller: confirmPassword,
+                      label: "Confirm Password",
+                      icon: Icons.lock_reset_rounded,
+                      isPassword: true,
+                    ),
 
                     const SizedBox(height: 30),
 
-                    // CREATE BUTTON
                     loading
                         ? const CircularProgressIndicator()
                         : SizedBox(
@@ -159,31 +188,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E88E5),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          elevation: 5,
                         ),
-                        child: const Text("CREATE ACCOUNT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: const Text("CREATE ACCOUNT", style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
-
                     const SizedBox(height: 20),
 
-                    // LOGIN LINK (Idinagdag)
-                    GestureDetector(
-                      onTap: _goToLogin,
-                      child: RichText(
-                        text: const TextSpan(
-                          text: "Already have an account? ",
-                          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
-                          children: [
-                            TextSpan(
-                              text: "Login here",
-                              style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Already a traveler? ", style: TextStyle(color: Colors.blueGrey)),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Text(
+                            "Login",
+                            style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                    ),
+                      ],
+                    )
                   ],
                 ),
               ),
@@ -194,35 +221,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // --- UI WIDGETS ---
-
+  // Gender Selector Widget
   Widget _buildGenderSelector() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _genderOption("Male", Icons.male_rounded),
-        const SizedBox(width: 10),
-        _genderOption("Female", Icons.female_rounded),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            "Sex/Gender",
+            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              _genderOption("Male", Icons.male_rounded),
+              _genderOption("Female", Icons.female_rounded),
+            ],
+          ),
+        ),
       ],
     );
   }
 
+  // Individual Gender Button Helper
   Widget _genderOption(String label, IconData icon) {
     bool isSelected = selectedGender == label;
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => selectedGender = label),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1E88E5) : Colors.white.withOpacity(0.5),
+            color: isSelected ? const Color(0xFF1E88E5) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: isSelected ? Colors.white : Colors.blueGrey, size: 18),
-              const SizedBox(width: 8),
-              Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.blueGrey, fontWeight: FontWeight.bold)),
+              Icon(icon, size: 18, color: isSelected ? Colors.white : Colors.blueGrey),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
             ],
           ),
         ),
@@ -230,22 +283,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, bool isPassword = false}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF1E88E5), size: 22),
+        prefixIcon: Icon(icon, color: const Color(0xFF1E88E5), size: 20),
         filled: true,
         fillColor: Colors.white.withOpacity(0.5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(vertical: 15),
       ),
     );
   }
 
   Widget _buildBlurBlob({required Color color, required double size}) {
-    return Container(width: size, height: size, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
   }
 }

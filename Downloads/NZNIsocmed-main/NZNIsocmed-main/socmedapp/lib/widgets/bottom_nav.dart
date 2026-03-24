@@ -1,43 +1,27 @@
 import 'package:flutter/material.dart';
-import '../screens/feed_screen.dart';
-import '../screens/create_post_screen.dart';
-import '../screens/chat_screen.dart';
-import '../screens/profile_screen.dart';
 
-class BottomNav extends StatefulWidget {
-  const BottomNav({super.key});
+class BottomNav extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
 
-  @override
-  State<BottomNav> createState() => _BottomNavState();
-}
-
-class _BottomNavState extends State<BottomNav> {
-  int index = 0;
-
-  final screens = const [
-    FeedScreen(),
-    CreatePostScreen(),
-    ChatScreen(),
-    ProfileScreen(),
-  ];
+  const BottomNav({super.key, required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack( // Mas maganda ito para hindi nagre-reset ang scroll ng screens
-        index: index,
-        children: screens,
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: onTap,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.grey,
-        onTap: (i) => setState(() => index = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Feed"),
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: "Feed"),
           BottomNavigationBarItem(icon: Icon(Icons.add_box), label: "Post"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: "Chat"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
       ),

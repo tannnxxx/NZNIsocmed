@@ -1,124 +1,140 @@
-import 'dart:typed_data'; // Para sa Image Bytes (Web Safe)
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:video_player/video_player.dart';
 import '../providers/post_provider.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
-
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-  Uint8List? webImage; // Dito itatago ang bytes ng napiling picture
-  bool _isSharing = false;
-
   final captionController = TextEditingController();
   final locationController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
-  // FUNCTION: PICK IMAGE
-  // Pumipili ng image sa gallery at binabasa ito bilang 'Bytes' para hindi mag-error sa Web.
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? selected = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+  XFile? _pickedFile;
+  bool isVideo = false;
+  VideoPlayerController? _videoController;
 
-    if (selected != null) {
-      final bytes = await selected.readAsBytes();
+  Future<void> _pickMedia(bool video) async {
+    XFile? file = video
+        ? await _picker.pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 5))
+        : await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+
+    if (file != null) {
+      if (_videoController != null) await _videoController!.dispose();
       setState(() {
-        webImage = bytes;
+        _pickedFile = file;
+        isVideo = video;
       });
-    }
-  }
-
-  // FUNCTION: SHARE POST
-  // Ito ang logic para i-upload ang image sa Storage at data sa Firestore.
-  Future<void> _sharePost() async {
-    if (webImage == null || captionController.text.isEmpty) return;
-
-    setState(() => _isSharing = true); // Ipakita ang loading spinner
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      final postId = DateTime.now().millisecondsSinceEpoch.toString();
-
-      // 1. UPLOAD IMAGE SA STORAGE (Gamit ang putData para sa Web)
-      Reference ref = FirebaseStorage.instance.ref().child('posts/$postId.jpg');
-      await ref.putData(webImage!, SettableMetadata(contentType: 'image/jpeg'));
-      String imageUrl = await ref.getDownloadURL();
-
-      // 2. SAVE DATA SA FIRESTORE
-      await FirebaseFirestore.instance.collection('posts').add({
-        'caption': captionController.text.trim(),
-        'location': locationController.text.trim(),
-        'imageUrl': imageUrl,
-        'userId': user?.uid,
-        'userName': user?.displayName ?? "Traveler",
-        'userImage': user?.photoURL ?? "",
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // 3. REFRESH PROVIDER AT BALIK SA FEED
-      if (mounted) {
-        Provider.of<PostProvider>(context, listen: false).loadPosts();
-        Navigator.pop(context);
+      if (video) {
+        _videoController = kIsWeb
+            ? VideoPlayerController.network(file.path)
+            : VideoPlayerController.file(File(file.path));
+        _videoController!.initialize().then((_) {
+          setState(() {});
+          _videoController!.play();
+          _videoController!.setLooping(true);
+        });
       }
-    } catch (e) {
-      print("Upload Error: $e");
-    } finally {
-      if (mounted) setState(() => _isSharing = false);
     }
   }
 
   @override
+  void dispose() {
+    captionController.dispose();
+    locationController.dispose();
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<PostProvider>(context);
+    final isDark = provider.isDarkMode;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("CREATE POST"), centerTitle: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // IMAGE DISPLAY AREA
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 250,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: webImage != null
-                    ? ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.memory(webImage!, fit: BoxFit.cover))
-                    : const Icon(Icons.add_a_photo, size: 50, color: Colors.blue),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF0F7FF),
+      body: Stack(
+        children: [
+          _buildBackground(isDark),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Row(children: [IconButton(icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black), onPressed: () => Navigator.pop(context))]),
+                  const SizedBox(height: 20),
+                  const Text("CREATE NEW POST", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                  const SizedBox(height: 25),
+                  GestureDetector(
+                    onTap: () => _showPicker(isDark),
+                    child: Container(
+                      height: 250, width: double.infinity,
+                      decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.white.withOpacity(0.4), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.3))),
+                      child: _pickedFile == null ? const Icon(Icons.add_a_photo, size: 50, color: Colors.blue) : ClipRRect(borderRadius: BorderRadius.circular(20), child: _buildPreview()),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildInput(captionController, "What's on your mind?", Icons.notes, isDark, lines: 3),
+                  const SizedBox(height: 15),
+                  _buildInput(locationController, "Add location...", Icons.location_on, isDark),
+                  const SizedBox(height: 30),
+                  provider.isLoading ? const CircularProgressIndicator() : _buildPostBtn(provider),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            // CAPTION FIELD
-            TextField(
-              controller: captionController,
-              maxLines: 3,
-              decoration: const InputDecoration(hintText: "Write a caption...", border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 40),
-            // SHARE BUTTON
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isSharing ? null : _sharePost,
-                child: _isSharing ? const CircularProgressIndicator() : const Text("SHARE POST"),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _buildPreview() {
+    if (isVideo && _videoController != null) return VideoPlayer(_videoController!);
+    return kIsWeb ? Image.network(_pickedFile!.path, fit: BoxFit.cover) : Image.file(File(_pickedFile!.path), fit: BoxFit.cover);
+  }
+
+  void _showPicker(bool isDark) {
+    showModalBottomSheet(context: context, backgroundColor: isDark ? Colors.black : Colors.white, builder: (ctx) => Wrap(children: [
+      ListTile(leading: const Icon(Icons.image), title: const Text("Photo"), onTap: () { _pickMedia(false); Navigator.pop(context); }),
+      ListTile(leading: const Icon(Icons.video_library), title: const Text("Video (Max 5s)"), onTap: () { _pickMedia(true); Navigator.pop(context); }),
+    ]));
+  }
+
+  Widget _buildInput(TextEditingController c, String h, IconData i, bool d, {int lines = 1}) {
+    return TextField(controller: c, maxLines: lines, style: TextStyle(color: d ? Colors.white : Colors.black),
+        decoration: InputDecoration(hintText: h, prefixIcon: Icon(i, color: Colors.blue), filled: true, fillColor: d ? Colors.white10 : Colors.white.withOpacity(0.5), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none)));
+  }
+
+  Widget _buildPostBtn(PostProvider p) {
+    return SizedBox(width: double.infinity, height: 55, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+        onPressed: () async {
+          if (_pickedFile == null || captionController.text.isEmpty) return;
+          try {
+            await p.addPost(
+                file: _pickedFile!,
+                caption: captionController.text,
+                location: locationController.text,
+                userName: FirebaseAuth.instance.currentUser?.displayName ?? "Traveler",
+                isVideo: isVideo
+            );
+            if (mounted) Navigator.pop(context);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error: File too large or connection issue.")));
+          }
+        }, child: const Text("POST NOW", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
+  }
+
+  Widget _buildBackground(bool d) => Stack(children: [
+    Positioned(top: -50, right: -50, child: Container(width: 250, height: 250, decoration: BoxDecoration(color: Colors.blue.withOpacity(d ? 0.1 : 0.2), shape: BoxShape.circle))),
+    BackdropFilter(filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60), child: Container(color: Colors.transparent))
+  ]);
 }

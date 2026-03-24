@@ -1,6 +1,6 @@
-import 'dart:ui';
+import 'dart:ui'; // Required for ImageFilter
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
@@ -12,51 +12,33 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final email = TextEditingController();
-  final password = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   bool loading = false;
 
-  // --- FUNCTION: LOGIN LOGIC ---
   void login() async {
-    if (email.text.isEmpty || password.text.isEmpty) {
-      _showMsg("Please fill all fields", isError: true);
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
       return;
     }
 
     setState(() => loading = true);
 
     try {
-      // Tinatawag ang AuthService para sa authentication
-      await AuthService().loginUser(
-        email.text.trim(),
-        password.text.trim(),
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
-
-      if (mounted) {
-        // Kapag successful, dideretso sa HomeScreen at tatanggalin ang Login sa stack
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
+      // Hindi na kailangan ng Navigator push kung gamit mo ang StreamBuilder sa main.dart
     } catch (e) {
-      if (mounted) {
-        _showMsg("Wrong email or password. Please try again.", isError: true);
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => loading = false);
     }
-  }
-
-  // Helper para sa SnackBar notifications
-  void _showMsg(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.redAccent : Colors.blueAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -65,55 +47,74 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: const Color(0xFFF0F4F8),
       body: Stack(
         children: [
-          // 1. BACKGROUND DECORATION (BLOBS)
-          Positioned(top: -50, right: -50, child: _buildBlurBlob(color: Colors.blue.withOpacity(0.4), size: 300)),
-          Positioned(bottom: 100, left: -80, child: _buildBlurBlob(color: Colors.orange.withOpacity(0.3), size: 250)),
-          Positioned(top: 200, left: 50, child: _buildBlurBlob(color: Colors.teal.withOpacity(0.2), size: 200)),
+          // 1. Mesh Background Blobs (Ang nagbibigay ng kulay sa likod)
+          Positioned(
+            top: -50,
+            right: -50,
+            child: _buildBlurBlob(color: Colors.blue.withOpacity(0.4), size: 300),
+          ),
+          Positioned(
+            bottom: 100,
+            left: -80,
+            child: _buildBlurBlob(color: Colors.orange.withOpacity(0.3), size: 250),
+          ),
+          Positioned(
+            top: 200,
+            left: 50,
+            child: _buildBlurBlob(color: Colors.teal.withOpacity(0.2), size: 200),
+          ),
 
+          // 2. The Heavy Blur Layer (Creates the "Mesh" look)
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
             child: Container(color: Colors.transparent),
           ),
 
-          // 2. LOGIN FORM
+          // 3. The Login UI
           Center(
             child: SingleChildScrollView(
               child: Container(
                 padding: const EdgeInsets.all(30),
                 margin: const EdgeInsets.symmetric(horizontal: 25),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withOpacity(0.7), // Glassmorphism opacity
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: Colors.white.withOpacity(0.5)),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, spreadRadius: 5)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    )
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.explore_rounded, size: 65, color: Color(0xFF1E88E5)),
+                    const Icon(
+                      Icons.explore_rounded,
+                      size: 60,
+                      color: Color(0xFF1E88E5),
+                    ),
                     const SizedBox(height: 10),
                     const Text(
                       "TRAVEL SOCIAL",
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
                         color: Color(0xFF263238),
                       ),
                     ),
-                    const Text("Discover your next journey", style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-                    const SizedBox(height: 35),
-
-                    // TEXT FIELDS
-                    _buildTextField(controller: email, label: "Email Address", icon: Icons.email_outlined),
+                    const Text(
+                      "Discover your next journey",
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                    const SizedBox(height: 30),
+                    _buildTextField(emailController, "Email", Icons.email_outlined, false),
                     const SizedBox(height: 15),
-                    _buildTextField(controller: password, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
-
+                    _buildTextField(passwordController, "Password", Icons.lock_outline_rounded, true),
                     const SizedBox(height: 25),
-
-                    // LOGIN BUTTON
                     loading
                         ? const CircularProgressIndicator()
                         : SizedBox(
@@ -124,35 +125,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E88E5),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
                           elevation: 0,
                         ),
-                        child: const Text("LOGIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: const Text(
+                          "LOGIN",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // LINK TO REGISTER
-                    GestureDetector(
-                      onTap: () {
-                        // Gamit ang push para pwedeng mag-back kung gusto ng user
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () {
                         Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen())
+                          context,
+                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
                         );
                       },
-                      child: RichText(
-                        text: const TextSpan(
-                          text: "New here? ",
-                          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
-                          children: [
-                            TextSpan(
-                              text: "Create Account",
-                              style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
+                      child: const Text(
+                        "New here? Create Account",
+                        style: TextStyle(color: Color(0xFF1E88E5)),
                       ),
                     )
                   ],
@@ -165,28 +159,30 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- UI HELPERS ---
-
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, bool isPassword = false}) {
+  // Textfield Helper for Clean Code
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, bool isPassword) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 14),
-        prefixIcon: Icon(icon, color: const Color(0xFF1E88E5), size: 22),
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
         filled: true,
         fillColor: Colors.white.withOpacity(0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
       ),
     );
   }
 
+  // Blob Helper
   Widget _buildBlurBlob({required Color color, required double size}) {
-    return Container(width: size, height: size, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+    );
   }
 }
