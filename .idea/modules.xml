@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<<<<<<< HEAD
       <module fileurl="file://$PROJECT_DIR$/.idea/socmedapp.iml" filepath="$PROJECT_DIR$/.idea/socmedapp.iml" />
+=======
+      <module fileurl="file://$PROJECT_DIR$/.idea/NZNIsocmed-main.iml" filepath="$PROJECT_DIR$/.idea/NZNIsocmed-main.iml" />
+>>>>>>> 1338e91a (Social App)
     </modules>
   </component>
 </project>

@@ -209,6 +209,21 @@
           <option name="screenY" value="2340" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
+=======
+          <option name="api" value="36" />
+          <option name="brand" value="samsung" />
+          <option name="codename" value="a15xtfn" />
+          <option name="id" value="a15xtfn" />
+          <option name="labId" value="google" />
+          <option name="manufacturer" value="Samsung" />
+          <option name="name" value="Galaxy A15 5G" />
+          <option name="screenDensity" value="450" />
+          <option name="screenX" value="1080" />
+          <option name="screenY" value="2340" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+>>>>>>> 1338e91a (Social App)
           <option name="api" value="35" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a16" />
@@ -245,6 +260,21 @@
           <option name="screenY" value="2340" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
+=======
+          <option name="api" value="35" />
+          <option name="brand" value="samsung" />
+          <option name="codename" value="a16xeea" />
+          <option name="id" value="a16xeea" />
+          <option name="labId" value="google" />
+          <option name="manufacturer" value="Samsung" />
+          <option name="name" value="A16 5G" />
+          <option name="screenDensity" value="450" />
+          <option name="screenX" value="1080" />
+          <option name="screenY" value="2340" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+>>>>>>> 1338e91a (Social App)
           <option name="api" value="31" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a21" />
@@ -438,6 +468,21 @@
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
           <option name="api" value="36" />
+<<<<<<< HEAD
+=======
+          <option name="brand" value="samsung" />
+          <option name="codename" value="b6qsqw" />
+          <option name="id" value="b6qsqw" />
+          <option name="labId" value="google" />
+          <option name="manufacturer" value="Samsung" />
+          <option name="name" value="Galaxy Z Flip 6" />
+          <option name="screenDensity" value="480" />
+          <option name="screenX" value="1080" />
+          <option name="screenY" value="2640" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+          <option name="api" value="36" />
+>>>>>>> 1338e91a (Social App)
           <option name="brand" value="google" />
           <option name="codename" value="blazer" />
           <option name="id" value="blazer" />
@@ -767,6 +812,21 @@
         <PersistentDeviceSelectionData>
           <option name="api" value="34" />
           <option name="brand" value="motorola" />
+<<<<<<< HEAD
+=======
+          <option name="codename" value="fogorow" />
+          <option name="id" value="fogorow" />
+          <option name="labId" value="google" />
+          <option name="manufacturer" value="Motorola" />
+          <option name="name" value="moto g24" />
+          <option name="screenDensity" value="280" />
+          <option name="screenX" value="720" />
+          <option name="screenY" value="1612" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+          <option name="api" value="34" />
+          <option name="brand" value="motorola" />
+>>>>>>> 1338e91a (Social App)
           <option name="codename" value="fogos" />
           <option name="id" value="fogos" />
           <option name="labId" value="google" />
